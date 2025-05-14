@@ -1,36 +1,31 @@
-import argparse
-import configparser
-from datetime import datetime
-import grp, pwd
-from fnmatch import fnmatch
-import hashlib
-from math import ceil
-import os
-import re
-import sys
-import zlib
 
-argparser = argparse.ArgumentParser(description="A simplified version control system like Git.")
-argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
-argsubparsers.required = True
+import argparse, collections, difflib, enum, hashlib, operator, os, stat
+import struct, sys, time, urllib.request, zlib
 
 
-def main(argv=sys.argv[1:]):
-    args = argparser.parse_args(argv)
-    match args.command:
-        case "add"          : cmd_add(args)
-        case "cat-file"     : cmd_cat_file(args)
-        case "check-ignore" : cmd_check_ignore(args)
-        case "checkout"     : cmd_checkout(args)
-        case "commit"       : cmd_commit(args)
-        case "hash-object"  : cmd_hash_object(args)
-        case "init"         : cmd_init(args)
-        case "log"          : cmd_log(args)
-        case "ls-files"     : cmd_ls_files(args)
-        case "ls-tree"      : cmd_ls_tree(args)
-        case "rev-parse"    : cmd_rev_parse(args)
-        case "rm"           : cmd_rm(args)
-        case "show-ref"     : cmd_show_ref(args)
-        case "status"       : cmd_status(args)
-        case "tag"          : cmd_tag(args)
-        case _              : print("command not found");
+class ObjectType(enum.Enum):
+    commit = 1
+    tree = 2
+    blob = 3
+
+
+def read_file(path):
+    """Read contents of file at given path as bytes."""
+    with open(path, 'rb') as f:
+        return f.read()
+
+
+def write_file(path, data):
+    """Write data bytes to file at given path."""
+    with open(path, 'wb') as f:
+        f.write(data)
+
+
+def init(repo):
+    """Create directory for repo and initialize .git directory."""
+    os.mkdir(repo)
+    os.mkdir(os.path.join(repo, '.git'))
+    for name in ['objects', 'refs', 'refs/heads']:
+        os.mkdir(os.path.join(repo, '.git', name))
+    write_file(os.path.join(repo, '.git', 'HEAD'), b'ref: refs/heads/master')
+    print('initialized empty repository: {}'.format(repo))
